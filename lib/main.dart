@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:maid/providers/user.dart';
+import 'package:maid/ui/desktop/pages/home_page.dart';
 import 'package:maid/ui/mobile/pages/home_page.dart';
 import 'package:maid/providers/session.dart';
 import 'package:maid/providers/character.dart';
@@ -68,12 +71,15 @@ class MaidAppState extends State<MaidApp> {
         }
 
         return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Maid',
-            theme: Themes.lightTheme(),
-            darkTheme: Themes.darkTheme(),
-            themeMode: mainProvider.themeMode,
-            home: const HomePage(title: "Maid"));
+          debugShowCheckedModeBanner: false,
+          title: 'Maid',
+          theme: Themes.lightTheme(),
+          darkTheme: Themes.darkTheme(),
+          themeMode: mainProvider.themeMode,
+          home: Platform.isAndroid || Platform.isIOS ? 
+                const MobileHomePage() : 
+                const DesktopHomePage(),
+        );
       },
     );
   }

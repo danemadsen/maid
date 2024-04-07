@@ -7,19 +7,19 @@ import 'package:maid/providers/user.dart';
 import 'package:maid_ui/maid_ui.dart';
 import 'package:provider/provider.dart';
 
-class ChatMessage extends StatefulWidget {
+class ChatMessageWidget extends StatefulWidget {
   final ChatRole role;
 
-  const ChatMessage({
+  const ChatMessageWidget({
     required super.key,
     this.role = ChatRole.assistant,
   });
 
   @override
-  ChatMessageState createState() => ChatMessageState();
+  ChatMessageWidgetState createState() => ChatMessageWidgetState();
 }
 
-class ChatMessageState extends State<ChatMessage>
+class ChatMessageWidgetState extends State<ChatMessageWidget>
     with SingleTickerProviderStateMixin {
   final List<Widget> _messageWidgets = [];
   late Session session;
