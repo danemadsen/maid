@@ -1,6 +1,9 @@
 part of 'package:maid/main.dart';
 
 class MessageWidget extends StatefulWidget {
+  final ArtificialIntelligenceController ai;
+  final ChatController chatController;
+  final AppSettings settings;
   final GeneralTreeNode<ChatMessage> node;
 
   /// The chain position is used to determine the position of the message in the chain.
@@ -12,10 +15,13 @@ class MessageWidget extends StatefulWidget {
   int get siblingCount => node.children.length;
   bool get onNextEnabled => (siblingsIndex + 1) < siblingCount;
   bool get onPreviousEnabled => siblingsIndex > 0;
-  bool get buildChild => node.currentChild!.currentChild != null && chainPosition > 0;
+  bool get buildChild => node.currentChild?.currentChild != null && chainPosition > 0;
 
   const MessageWidget({
     required super.key, 
+    required this.ai,
+    required this.chatController,
+    required this.settings,
     required this.node,
     required this.chainPosition,
   });
@@ -41,17 +47,39 @@ class MessageWidgetState extends State<MessageWidget> {
   void onSubmitEdit() {
     widget.node.addChild(UserChatMessage(controller.text));
 
-    ArtificialIntelligence.of(context).regenerate(widget.node.currentChild!);
+    tryRegenerate(widget.node.currentChild!);
 
     setState(() => editing = false);
   }
 
-  void onRegenerate() {
-    ArtificialIntelligence.of(context).regenerate(widget.node);
+  void onRegenerate() => tryRegenerate(widget.node);
+
+  void tryRegenerate(GeneralTreeNode<ChatMessage> node) async {
+    try {
+      node.addChild(AssistantChatMessage(''));
+
+      if (widget.ai is LlamaCppController) {
+        (widget.ai as LlamaCppController).reloadModel(true);
+      }
+
+      final chainData = node.reverseChain.last.chainData.copy();
+      chainData.removeLast();
+
+      Stream<String> stream = widget.ai.prompt(chainData);
+
+      await widget.chatController.streamToChild(node, stream);
+    }
+    catch (exception) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => ErrorDialog(exception: exception),
+      );
+    }
   }
 
   void onHorizontalDragEnd(DragEndDetails details) {
-    if (ArtificialIntelligence.of(context).busy) return;
+    if (widget.ai.busy) return;
 
     const threshold = 80;
     
@@ -68,11 +96,14 @@ class MessageWidgetState extends State<MessageWidget> {
   Widget build(BuildContext context) => Column(
     children: [
       // Build the current node
-      buildCurrentMessage(),
+      if (widget.node.currentChild != null) buildCurrentMessage(),
 
       /// Builds the child node/s if it exists.
       if (widget.buildChild) MessageWidget(
         key: childKey,
+        ai: widget.ai,
+        chatController: widget.chatController,
+        settings: widget.settings,
         node: widget.node.currentChild!,
         chainPosition: widget.chainPosition - 1,
       ),
@@ -82,16 +113,21 @@ class MessageWidgetState extends State<MessageWidget> {
   // The buildCurrentMessage method will build the padding and the appropriate column based on the editing state.
   Widget buildCurrentMessage() => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-    child: editing && !ArtificialIntelligence.of(context).busy ? 
+    child: editing && !widget.ai.busy ? 
       buildMessageEditingColumn() : 
       GestureDetector(
         onHorizontalDragEnd: onHorizontalDragEnd,
-        child: buildMessageColumn()
+        child: buildChatListener()
       ),
   );
 
+  Widget buildChatListener() => ListenableBuilder(
+    listenable: widget.chatController, 
+    builder: buildMessageColumn
+  );
+
   // The buildMessageColumn method will build the message column when the message is not being edited.
-  Widget buildMessageColumn() {
+  Widget buildMessageColumn(BuildContext context, Widget? child) {
     List<Widget> children = [
       buildTopRow(),
     ];
@@ -105,7 +141,7 @@ class MessageWidgetState extends State<MessageWidget> {
       if (i % 2 == 0) {
         children.add(SelectableText(part));
       } else {
-        children.add(CodeBox(code: part));
+        children.add(CodeBox(code: part, label: AppLocalizations.of(context)!.code));
       }
     }
 
@@ -125,7 +161,7 @@ class MessageWidgetState extends State<MessageWidget> {
         autofocus: true,
         style: Theme.of(context).textTheme.bodyMedium,
         decoration: InputDecoration(
-          hintText: "Edit Message",
+          hintText: AppLocalizations.of(context)!.editMessage,
           fillColor: Theme.of(context).colorScheme.surface,
         ),
         maxLines: null,
@@ -153,24 +189,25 @@ class MessageWidgetState extends State<MessageWidget> {
   );
 
   /// Builds the role of the message.
-  Widget buildRole() => Consumer<AppSettings>(
-    builder: widget.message is UserChatMessage ? userRoleRowBuilder : assistantRoleRowBuilder,
+  Widget buildRole() => ListenableBuilder(
+    listenable: widget.settings,
+    builder: widget.message is UserChatMessage ? buildUserRow : buildAssistantRow,
   );
 
   /// Builds the role of the message when the message is a user message.
-  Widget userRoleRowBuilder(BuildContext context, AppSettings settings, Widget? child) => Row(
+  Widget buildUserRow(BuildContext context, Widget? child) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      settings.userImage == null ? Icon(
+      widget.settings.userImage == null ? Icon(
         Icons.person, 
         color: Theme.of(context).colorScheme.onSurface
       ) : CircleAvatar(
         radius: 14,
-        backgroundImage: FileImage(settings.userImage!),
+        backgroundImage: FileImage(widget.settings.userImage!),
       ),
       const SizedBox(width: 10.0),
       Text(
-        settings.userName ?? 'User',
+        widget.settings.userName ?? AppLocalizations.of(context)!.user,
         style: const TextStyle(
           fontWeight: FontWeight.bold,
         ),
@@ -179,19 +216,19 @@ class MessageWidgetState extends State<MessageWidget> {
   );
 
   /// Builds the role of the message when the message is an assistant message.
-  Widget assistantRoleRowBuilder(BuildContext context, AppSettings settings, Widget? child) => Row(
+  Widget buildAssistantRow(BuildContext context, Widget? child) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      settings.assistantImage == null ? Icon(
+      widget.settings.assistantImage == null ? Icon(
         Icons.assistant, 
         color: Theme.of(context).colorScheme.onSurface
       ) : CircleAvatar(
         radius: 14,
-        backgroundImage: FileImage(settings.assistantImage!),
+        backgroundImage: FileImage(widget.settings.assistantImage!),
       ),
       const SizedBox(width: 10.0),
       Text(
-        settings.assistantName ?? 'Assistant',
+        widget.settings.assistantName ?? AppLocalizations.of(context)!.assistant,
         style: const TextStyle(
           fontWeight: FontWeight.bold,
         ),
@@ -200,12 +237,17 @@ class MessageWidgetState extends State<MessageWidget> {
   );
 
   /// Builds the actions for the user to interact with the message.
-  Widget buildActions() => Row(
+  Widget buildActions() => ListenableBuilder(
+    listenable: widget.ai,
+    builder: buildActionsRow,
+  );
+  
+  Widget buildActionsRow(BuildContext context, Widget? child) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      roleSpecificButtonBuilder(),
-      branchSwitcherBuilder(),
-      deleteButtonBuilder(),
+      buildRoleSpecificButton(),
+      buildBranchSwitcher(),
+      buildDeleteButton(),
     ],
   );
 
@@ -214,69 +256,61 @@ class MessageWidgetState extends State<MessageWidget> {
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       IconButton(
+        tooltip: AppLocalizations.of(context)!.done,
         icon: const Icon(Icons.done),
         onPressed: onSubmitEdit,
       ),
       IconButton(
+        tooltip: AppLocalizations.of(context)!.cancel,
         icon: const Icon(Icons.close),
         onPressed: () => setState(() => editing = false),
       ),
     ],
   );
 
-  Widget branchSwitcherBuilder() => Selector<ArtificialIntelligence, bool>(
-    selector: (context, ai) => ai.busy,
-    builder: buildBranchSwitcher,
-  );
-
   /// The branch switcher will allow the user to switch between branches.
-  Widget buildBranchSwitcher(BuildContext context, bool busy, Widget? child) => Row(
+  Widget buildBranchSwitcher() => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       IconButton(
+        tooltip: AppLocalizations.of(context)!.previous,
         icon: const Icon(Icons.arrow_left),
-        onPressed: !busy && widget.onPreviousEnabled ? onPrevious : null,
+        onPressed: !widget.ai.busy && widget.onPreviousEnabled ? onPrevious : null,
       ),
       Text('${widget.siblingsIndex + 1} / ${widget.siblingCount}'),
       IconButton(
+        tooltip: AppLocalizations.of(context)!.next,
         icon: const Icon(Icons.arrow_right),
-        onPressed: !busy && widget.onNextEnabled ? onNext : null,
+        onPressed: !widget.ai.busy && widget.onNextEnabled ? onNext : null,
       ),
     ],
-  );
-
-  Widget roleSpecificButtonBuilder() => Selector<ArtificialIntelligence, bool>(
-    selector: (context, ai) => ai.canPrompt,
-    builder: buildRoleSpecificButton,
   );
 
   /// This is the role specific button that will be used to interact with the message.
   /// 
   /// If the message is a user message, it will show an edit button.
   /// If the message is an assistant message, it will show a regenerate button.
-  Widget buildRoleSpecificButton(BuildContext context, bool canPrompt, Widget? child) {
+  Widget buildRoleSpecificButton() {
     if (widget.message is UserChatMessage) {
       return IconButton(
+        tooltip: AppLocalizations.of(context)!.edit,
         icon: const Icon(Icons.edit),
-        onPressed: canPrompt ? onEdit : null,
+        onPressed: widget.ai.canPrompt ? onEdit : null,
       );
     } 
     else {
       return IconButton(
+        tooltip: AppLocalizations.of(context)!.regenerate,
         icon: const Icon(Icons.refresh),
-        onPressed: canPrompt ? onRegenerate : null,
+        onPressed: widget.ai.canPrompt ? onRegenerate : null,
       );
     }
   }
 
-  /// This is the delete button that will be used to delete the message.
-  Widget deleteButtonBuilder() => Selector<ArtificialIntelligence, bool>(
-    selector: (context, ai) => ai.busy,
-    builder: buildDeleteButton,
-  );
-
-  Widget buildDeleteButton(BuildContext context, bool busy, Widget? child) => IconButton(
+  /// The delete button will allow the user to delete the message.
+  Widget buildDeleteButton() => IconButton(
+    tooltip: AppLocalizations.of(context)!.delete,
     icon: const Icon(Icons.delete),
-    onPressed: !busy ? onDelete : null,
+    onPressed: !widget.ai.busy ? onDelete : null,
   );
 }

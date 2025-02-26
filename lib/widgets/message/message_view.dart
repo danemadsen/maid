@@ -1,10 +1,16 @@
 part of 'package:maid/main.dart';
 
 class MessageView extends StatefulWidget {
+  final ArtificialIntelligenceController aiController;
+  final ChatController chatController;
+  final AppSettings settings;
   final int maxMessages;
 
   const MessageView({
     super.key, 
+    required this.aiController,
+    required this.chatController,
+    required this.settings,
     required this.maxMessages,
   });
 
@@ -62,7 +68,7 @@ class MessageViewState extends State<MessageView> {
       newRootPosition = rootPosition - (widget.maxMessages ~/ 2);
     } 
     else {
-      final root = ArtificialIntelligence.of(context).root;
+      final root = widget.chatController.root;
       newRootPosition = math.min(
         root.chain.length - widget.maxMessages, 
         rootPosition + (widget.maxMessages ~/ 2)
@@ -78,7 +84,7 @@ class MessageViewState extends State<MessageView> {
     controller.addListener(onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final root = ArtificialIntelligence.of(context).root;
+      final root = widget.chatController.root;
       rootPosition = math.max(0, root.chain.length - widget.maxMessages);
       controller.jumpTo(controller.position.maxScrollExtent);
     });
@@ -120,22 +126,34 @@ class MessageViewState extends State<MessageView> {
   Widget build(BuildContext context) => Expanded(
     child: SingleChildScrollView(
       controller: controller,
-      child: messageBuilder(),
+      child: buildChatListener(),
     )
   );
 
-  Widget messageBuilder() => Consumer2<ArtificialIntelligence, AppSettings>(
+  Widget buildChatListener() => ListenableBuilder(
+    listenable: widget.chatController,
+    builder: buildSettingsListener
+  );
+
+  Widget buildSettingsListener(BuildContext context, Widget? child) => ListenableBuilder(
+    listenable: widget.settings,
     builder: buildMessage
   );
 
-  Widget buildMessage(BuildContext context, ArtificialIntelligence ai, AppSettings settings, Widget? child) {
-    final currentRoot = ai.root.chain[rootPosition];
-    currentRoot.data.content = settings.systemPrompt ?? 'New Chat';
+  Widget buildMessage(BuildContext context, Widget? child) {
+    final currentRoot = widget.chatController.root.chain[rootPosition];
+    currentRoot.data.content = widget.settings.systemPrompt?.formatPlaceholders(
+      widget.settings.userName ?? AppLocalizations.of(context)!.user, 
+      widget.settings.assistantName ?? AppLocalizations.of(context)!.assistant
+    ) ?? AppLocalizations.of(context)!.newChat;
 
     if (currentRoot.currentChild == null) return const SizedBox.shrink();
 
     return MessageWidget(
       key: rootKey,
+      ai: widget.aiController,
+      chatController: widget.chatController,
+      settings: widget.settings,
       node: currentRoot,
       chainPosition: widget.maxMessages - 1,
     );

@@ -1,13 +1,17 @@
 part of 'package:maid/main.dart';
 
 class ChatTile extends StatefulWidget {
+  final ChatController chatController;
   final GeneralTreeNode<ChatMessage> node;
   final bool selected;
+  final bool disabled;
 
   const ChatTile({
     super.key,
+    required this.chatController,
     required this.node,
     required this.selected,
+    required this.disabled,
   });
 
   @override
@@ -18,7 +22,7 @@ class ChatTileState extends State<ChatTile> {
   final GlobalKey key = GlobalKey();
 
   void onChatChange() {
-    ArtificialIntelligence.of(context).root = widget.node;
+    widget.chatController.root = widget.node;
   }
 
   @override
@@ -30,7 +34,7 @@ class ChatTileState extends State<ChatTile> {
       maxLines: 1,
     ),
     selected: widget.selected,
-    onTap: !ArtificialIntelligence.of(context).busy ? onChatChange : null,
+    onTap: !widget.disabled ? onChatChange : null,
     onLongPress: openPopover,
   );
 
@@ -54,7 +58,7 @@ class ChatTileState extends State<ChatTile> {
   }
 
   PopupMenuItem buildDeletePopover() => PopupMenuItem(
-    child: const Text('Delete'),
-    onTap:() => ArtificialIntelligence.of(context).deleteChat(widget.node),
+    child: Text(AppLocalizations.of(context)!.delete),
+    onTap:() => widget.chatController.deleteChat(widget.node),
   );
 }

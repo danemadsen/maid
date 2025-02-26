@@ -1,7 +1,9 @@
 part of 'package:maid/main.dart';
 
 class LoadModelButton extends StatelessWidget {
-  const LoadModelButton({super.key});
+  final LlamaCppController llama;
+  
+  const LoadModelButton({super.key, required this.llama});
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
@@ -14,7 +16,8 @@ class LoadModelButton extends StatelessWidget {
   );
 
   Widget buildInkWell(BuildContext context) => InkWell(
-    onTap: ArtificialIntelligence.of(context).loadModel,
+    key: ValueKey("load_model"),
+    onTap: llama.pickModel,
     borderRadius: BorderRadius.circular(10),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -35,7 +38,10 @@ class LoadModelButton extends StatelessWidget {
         style: buildStyle(context),
       ),
       Expanded(
-        child: Selector<ArtificialIntelligence, String?>(selector: (context, ai) => ai.model[LlmEcosystem.llamaCPP], builder: textBuilder),
+        child: ListenableBuilder(
+          listenable: llama, 
+          builder: textBuilder
+        )
       ),
       Text(
         "> > >",
@@ -44,10 +50,21 @@ class LoadModelButton extends StatelessWidget {
     ],
   );
 
-  Widget textBuilder(BuildContext context, String? model, Widget? child) => Text(
-    model != null ? model.split('/').last : "Load Model",
-    overflow: TextOverflow.ellipsis,
-    textAlign: TextAlign.center,
-    style: buildStyle(context),
-  );
+  Widget textBuilder(BuildContext context, Widget? child) {
+    String text;
+
+    if (llama.loading) {
+      text = AppLocalizations.of(context)!.loading;
+    }
+    else {
+      text = llama.model != null ? llama.model!.split('/').last : AppLocalizations.of(context)!.loadModel;
+    }
+    
+    return Text(
+      text,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: buildStyle(context),
+    );
+  }
 }

@@ -1,13 +1,18 @@
 part of 'package:maid/main.dart';
 
 class ThemeModeDropdown extends StatefulWidget {
-  const ThemeModeDropdown({super.key});
+  final AppSettings settings;
+  
+  const ThemeModeDropdown({
+    super.key, 
+    required this.settings
+  });
 
   @override
-  State<ThemeModeDropdown> createState() => _ThemeModeDropdownState();
+  State<ThemeModeDropdown> createState() => ThemeModeDropdownState();
 }
 
-class _ThemeModeDropdownState extends State<ThemeModeDropdown> {
+class ThemeModeDropdownState extends State<ThemeModeDropdown> {
   bool open = false;
 
   @override
@@ -21,7 +26,7 @@ class _ThemeModeDropdownState extends State<ThemeModeDropdown> {
   );
 
   Widget buildTitle() => Text(
-    'Theme Mode',
+    AppLocalizations.of(context)!.themeMode,
     style: TextStyle(
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: 16
@@ -31,16 +36,16 @@ class _ThemeModeDropdownState extends State<ThemeModeDropdown> {
   Widget buildDropDownRow() => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Selector<AppSettings, ThemeMode>(
-        selector: (context, settings) => settings.themeMode,
+      ListenableBuilder(
+        listenable: widget.settings,
         builder: buildThemeModeText
       ),
       buildPopupButton()
     ]
   );
 
-  Widget buildThemeModeText(BuildContext context, ThemeMode themeMode, Widget? child) => Text(
-    themeMode.name.titleize,
+  Widget buildThemeModeText(BuildContext context, Widget? child) => Text(
+    widget.settings.themeMode.getLocale(context),
     style: TextStyle(
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: 16
@@ -48,37 +53,39 @@ class _ThemeModeDropdownState extends State<ThemeModeDropdown> {
   );
 
   Widget buildPopupButton() => PopupMenuButton<ThemeMode>(
-    tooltip: 'Select App Theme Mode',
-    icon: Icon(
-      open ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-      color: Theme.of(context).colorScheme.onSurface,
-      size: 24,
-    ),
+    tooltip: AppLocalizations.of(context)!.selectThemeMode,
+    icon: buildPopupButtonIcon(),
     offset: const Offset(0, 40),
     itemBuilder: itemBuilder,
     onOpened: () => setState(() => open = true),
     onCanceled: () => setState(() => open = false),
     onSelected: (themeMode) {
       setState(() => open = false);
-      AppSettings.of(context).themeMode = themeMode;
+      widget.settings.themeMode = themeMode;
     }
+  );
+
+  Widget buildPopupButtonIcon() => Icon(
+    open ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+    color: Theme.of(context).colorScheme.onSurface,
+    size: 24,
   );
 
   List<PopupMenuEntry<ThemeMode>> itemBuilder(BuildContext context) => [
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: ThemeMode.system,
-      child: const Text('System')
+      child: Text(AppLocalizations.of(context)!.themeModeSystem)
     ),
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: ThemeMode.light,
-      child: const Text('Light')
+      child: Text(AppLocalizations.of(context)!.themeModeLight)
     ),
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: ThemeMode.dark,
-      child: const Text('Dark')
+      child: Text(AppLocalizations.of(context)!.themeModeDark)
     )
   ];
 }

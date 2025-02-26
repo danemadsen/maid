@@ -1,8 +1,13 @@
 part of 'package:maid/main.dart';
 
 class ChatView extends StatelessWidget {
+  final ChatController chatController;
+  final bool disabled;
+
   const ChatView({
     super.key,
+    required this.chatController,
+    required this.disabled,
   });
 
   @override
@@ -12,7 +17,10 @@ class ChatView extends StatelessWidget {
       children: [
         buildHeading(context),
         Divider(endIndent: 16, indent: 16, height: 16),
-        Consumer<ArtificialIntelligence>(builder: buildListView)
+        ListenableBuilder(
+          listenable: chatController,
+          builder: buildListView
+        )
       ],
     )
   );
@@ -26,22 +34,25 @@ class ChatView extends StatelessWidget {
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Text(
-        'Chats',
+        AppLocalizations.of(context)!.chatsTitle,
         style: Theme.of(context).textTheme.titleMedium,
       ),
       IconButton(
-        onPressed: ArtificialIntelligence.of(context).newChat,
+        tooltip: AppLocalizations.of(context)!.newChat,
+        onPressed: chatController.newChat,
         icon: const Icon(Icons.add),
       )
     ]
   );
   
-  Widget buildListView(BuildContext context, ArtificialIntelligence ai, Widget? child) => Expanded(
+  Widget buildListView(BuildContext context, Widget? child) => Expanded(
     child: ListView.builder(
-      itemCount: ai.chats.length,
+      itemCount: chatController.chats.length,
       itemBuilder: (context, index) => ChatTile(
-        node: ai.chats[index], 
-        selected: index == 0
+        chatController: chatController,
+        node: chatController.chats[index], 
+        selected: index == 0,
+        disabled: disabled,
       ),
     )
   );

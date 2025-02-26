@@ -1,7 +1,12 @@
 part of 'package:maid/main.dart';
 
 class OverrideView extends StatefulWidget {
-  const OverrideView({super.key});
+  final ArtificialIntelligenceController aiController;
+  
+  const OverrideView({
+    super.key, 
+    required this.aiController
+  });
 
   @override
   State<OverrideView> createState() => OverrideViewState();
@@ -9,14 +14,13 @@ class OverrideView extends StatefulWidget {
 
 class OverrideViewState extends State<OverrideView> {
   Timer? timer;
-  ArtificialIntelligence? ai;
   Map<String,dynamic> overrides = {};
   int overrideCount = 0;
 
   @override
   void initState() {
     super.initState();
-    overrides.addAll(ArtificialIntelligence.of(context).overrides);
+    overrides.addAll(widget.aiController.overrides);
     overrideCount = overrides.length;
     timer = Timer.periodic(const Duration(seconds: 2), (_) => save());
   }
@@ -28,13 +32,11 @@ class OverrideViewState extends State<OverrideView> {
   }
 
   void save() {
-    final ai = ArtificialIntelligence.of(context);
-
-    if (ai.overrides.length == overrides.length && ai.overrides.entries.every((entry) => overrides[entry.key] == entry.value)) {
+    if (widget.aiController.overrides.length == overrides.length && widget.aiController.overrides.entries.every((entry) => overrides[entry.key] == entry.value)) {
       return;
     }
 
-    ai.overrides = Map.from(overrides);
+    widget.aiController.overrides = Map.from(overrides);
   }
 
   void onChange(String oldKey, [String? newKey, dynamic newValue]) {
@@ -61,7 +63,7 @@ class OverrideViewState extends State<OverrideView> {
   Widget build(BuildContext context) {
     List<Widget> children = [
       Text(
-        'Inference Overrides',
+        AppLocalizations.of(context)!.inferanceOverrides,
         style: Theme.of(context).textTheme.titleMedium,
       ),
       const SizedBox(height: 8),
@@ -83,16 +85,19 @@ class OverrideViewState extends State<OverrideView> {
     );
   }
 
-  Widget buildActionsRow() => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  Widget buildActionsRow() => Wrap(
+    alignment: WrapAlignment.center,
+    runAlignment: WrapAlignment.center,
+    spacing: 16,
+    runSpacing: 16,
     children: [
       ElevatedButton(
         onPressed: () => setState(() => overrideCount += 1), 
-        child: const Text('Add Override')
+        child: Text(AppLocalizations.of(context)!.addOverride)
       ),
       ElevatedButton(
         onPressed: save, 
-        child: const Text('Save Overrides')
+        child: Text(AppLocalizations.of(context)!.saveOverride)
       ),
     ]
   ); 

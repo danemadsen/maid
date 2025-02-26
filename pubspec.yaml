@@ -1,8 +1,8 @@
 name: maid
-description: A cross-platform Flutter app for chatting with AI.
+description: 'A cross-platform Flutter app for chatting with AI.'
 publish_to: 'none'
 
-version: 2.0.0+1943
+version: 2.0.1+2068
 
 environment:
   sdk: ^3.6.1
@@ -10,14 +10,24 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   shared_preferences: ^2.5.2
-  provider: ^6.1.2
   flutter_colorpicker: ^1.1.0
-  file_picker: 8.1.7
   tree_structs: ^1.0.5
-  lcpp: ^0.1.5
-  ollama_dart: ^0.2.2+1
+  image: ^4.5.2
+  crypto: ^3.0.6
   http: ^1.3.0
+
+  # For loading images and GGUF files
+  file_picker: 8.1.7
+
+  # Supported Ecosystems
+  lcpp: ^0.1.6
+  ollama_dart: ^0.2.2+1
+  openai_dart: ^0.4.5
+  mistralai_dart: ^0.0.3+4
 
   # For searching local network for ollama
   device_info_plus: ^11.3.0
@@ -25,13 +35,23 @@ dependencies:
   network_info_plus: ^6.1.3
   lan_scanner: ^4.0.0+1
 
+  # The maintainer of this package has not updated the package on pub.dev
+  # https://github.com/KasemJaffer/receive_sharing_intent/issues/354
+  receive_sharing_intent:
+    git:
+      url: https://github.com/KasemJaffer/receive_sharing_intent
+      ref: 2cea396843cd3ab1b5ec4334be4233864637874e
+
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.3
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - images/logo.png

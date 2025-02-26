@@ -7,10 +7,10 @@ class OverrideTypeDropdown extends StatefulWidget {
   const OverrideTypeDropdown({super.key, required this.onChanged, required this.initialValue});
 
   @override
-  State<OverrideTypeDropdown> createState() => _OverrideTypeDropdownState();
+  State<OverrideTypeDropdown> createState() => OverrideTypeDropdownState();
 }
 
-class _OverrideTypeDropdownState extends State<OverrideTypeDropdown> {
+class OverrideTypeDropdownState extends State<OverrideTypeDropdown> {
   OverrideType overrideType = OverrideType.string;
   bool open = false;
 
@@ -31,7 +31,7 @@ class _OverrideTypeDropdownState extends State<OverrideTypeDropdown> {
   );
 
   Widget buildOverrideText() => Text(
-    overrideType.name.titleize,
+    overrideType.getLocale(context),
     style: TextStyle(
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: 16
@@ -39,12 +39,8 @@ class _OverrideTypeDropdownState extends State<OverrideTypeDropdown> {
   );
 
   Widget buildPopupButton() => PopupMenuButton<OverrideType>(
-    tooltip: 'Select Override Type',
-    icon: Icon(
-      open ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-      color: Theme.of(context).colorScheme.onSurface,
-      size: 24,
-    ),
+    tooltip: AppLocalizations.of(context)!.selectOverrideType,
+    icon: buildPopupButtonIcon(),
     offset: const Offset(0, 40),
     itemBuilder: itemBuilder,
     onOpened: () => setState(() => open = true),
@@ -58,26 +54,32 @@ class _OverrideTypeDropdownState extends State<OverrideTypeDropdown> {
     }
   );
 
+  Widget buildPopupButtonIcon() => Icon(
+    open ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+    color: Theme.of(context).colorScheme.onSurface,
+    size: 24,
+  );
+
   List<PopupMenuEntry<OverrideType>> itemBuilder(BuildContext context) => [
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: OverrideType.string,
-      child: const Text('String')
+      child: Text(AppLocalizations.of(context)!.overrideTypeString)
     ),
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: OverrideType.int,
-      child: const Text('Int')
+      child: Text(AppLocalizations.of(context)!.overrideTypeInteger)
     ),
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: OverrideType.double,
-      child: const Text('Double')
+      child: Text(AppLocalizations.of(context)!.overrideTypeDouble)
     ),
     PopupMenuItem(
       padding: EdgeInsets.all(8),
       value: OverrideType.bool,
-      child: const Text('Bool')
+      child: Text(AppLocalizations.of(context)!.overrideTypeBoolean)
     ),
     PopupMenuItem(
       padding: EdgeInsets.all(8),
